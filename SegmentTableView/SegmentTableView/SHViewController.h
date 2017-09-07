@@ -11,6 +11,7 @@
 @interface SHViewController : UIViewController
 
 - (void)addChildVCWithArray:(NSArray <UIViewController *> *)childVCArray
-                 headerView:(UIView *)headerView;
+                 headerView:(UIView *)headerView
+              segmentHeight:(CGFloat)segmentHeight;
 
 @end

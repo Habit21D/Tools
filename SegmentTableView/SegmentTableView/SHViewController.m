@@ -9,9 +9,14 @@
 #import "SHViewController.h"
 #define SCREEN_WIDTH [UIScreen mainScreen].bounds.size.width
 #define SCREEN_HEIGHT [UIScreen mainScreen].bounds.size.height
-
+#define WEAKSELF __weak typeof(self) weakSelf = self;
 @interface SHViewController ()
-@property (nonatomic , assign) CGFloat headerHeight;
+@property (nonatomic, strong) UIScrollView *scrollView;
+@property (nonatomic, strong) NSArray <UIViewController *> *vcArray;
+@property (nonatomic, strong) UIView *headerView;
+@property (nonatomic, assign) CGFloat headerHeight;
+@property (nonatomic, assign) CGFloat segmentHeight;
+@property (nonatomic, assign) CGFloat headerMaxScrollHeight;
 
 @end
 
@@ -19,63 +24,88 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
+    self.view.backgroundColor = [UIColor whiteColor];
     // Do any additional setup after loading the view.
+    [self.view addSubview:self.scrollView];
+    
+}
+
+- (UIScrollView *)scrollView {
+    if (!_scrollView) {
+        _scrollView = [[UIScrollView alloc] initWithFrame:self.view.bounds];
+        _scrollView.contentSize = CGSizeMake(SCREEN_WIDTH * 2, SCREEN_HEIGHT);
+        _scrollView.showsHorizontalScrollIndicator = NO;
+        _scrollView.pagingEnabled = YES;
+    }
+    return _scrollView;
 }
 
 - (void)addChildVCWithArray:(NSArray <UIViewController *> *)childVCArray
-                 headerView:(UIView *)headerView {
+                 headerView:(UIView *)headerView
+              segmentHeight:(CGFloat)segmentHeight {
+    if (!headerView) {
+        [self.view addSubview:headerView];
+        self.headerView = headerView;
+        self.headerHeight = CGRectGetHeight(headerView.frame);
+    }
+    
+    self.segmentHeight =  segmentHeight;
+    self.headerMaxScrollHeight = self.headerHeight - self.segmentHeight;
+    
+    if (!childVCArray || childVCArray.count <= 0) {
+        return;
+    }
+    self.vcArray = childVCArray;
+    _scrollView.contentSize = CGSizeMake(SCREEN_WIDTH * childVCArray.count, SCREEN_HEIGHT);
+    WEAKSELF
     [childVCArray enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
         UIViewController* childVC = (UIViewController *)obj;
-        [childVC.view addSubview:childVC.view];
-        [self addChildViewController:childVC];
-        UIScrollView *scrollView = [self getScrollViewWithVC:childVC];
-        [scrollView addObserver:self forKeyPath:@"contentOffset" options:NSKeyValueObservingOptionInitial context:nil];
-        [scrollView addObserver:self forKeyPath:@"dragging" options:NSKeyValueObservingOptionInitial context:nil];
-        [scrollView addObserver:self forKeyPath:@"decelerating" options:NSKeyValueObservingOptionInitial context:nil];
+        childVC.view.frame = CGRectMake(SCREEN_WIDTH * idx, CGRectGetMinY(childVC.view.frame), SCREEN_WIDTH, CGRectGetHeight(childVC.view.frame));
+        [weakSelf.scrollView addSubview:childVC.view];
+        [weakSelf addChildViewController:childVC];
+        UIScrollView *scrollView = [weakSelf getScrollViewWithVC:childVC];
+        
+        [scrollView addObserver:weakSelf forKeyPath:@"contentOffset" options:NSKeyValueObservingOptionInitial context:nil];
+        [scrollView addObserver:weakSelf forKeyPath:@"dragging" options:NSKeyValueObservingOptionInitial context:nil];
+        [scrollView addObserver:weakSelf forKeyPath:@"decelerating" options:NSKeyValueObservingOptionInitial context:nil];
 
     }];
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context
 {
+    UIScrollView *scrollView = object;
+    CGFloat offsetY = scrollView.contentOffset.y;
     if ([keyPath isEqualToString:@"contentOffset"]) {
-        UITableView *tableView = object;
-        CGFloat contentOffsetY = tableView.contentOffset.y;
-        
-        // 如果滑动没有超过150
-        if (contentOffsetY < 150) {
-            // 让这三个tableView的偏移量相等
-            for (BaseViewController *vc in self.childViewControllers) {
-                if (vc.tableView.contentOffset.y != tableView.contentOffset.y) {
-                    vc.tableView.contentOffset = tableView.contentOffset;
+        if (offsetY > self.headerMaxScrollHeight) {
+            if (CGRectGetMinY(self.headerView.frame) != -self.headerMaxScrollHeight) {
+                self.headerView.frame = CGRectMake(0, - self.headerMaxScrollHeight, SCREEN_WIDTH, self.headerHeight);
+                
+            }}else if (offsetY > 0 && offsetY <= self.headerMaxScrollHeight) {
+                
+                self.headerView.frame = CGRectMake(0, - offsetY, SCREEN_WIDTH, self.headerHeight);
+            }else if (offsetY < 0) {
+                self.headerView.frame = CGRectMake(SCREEN_WIDTH * offsetY / self.headerHeight /2.0,0, SCREEN_WIDTH * (self.headerHeight - offsetY)/self.headerHeight, self.headerHeight - offsetY);
+            }
+    } else if ([keyPath isEqualToString:@"dragging"] || [keyPath isEqualToString:@"decelerating"]){
+            WEAKSELF
+            [self.vcArray enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+                UIViewController* childVC = (UIViewController *)obj;
+                UIScrollView *scrollView = [weakSelf getScrollViewWithVC:childVC];
+                if (offsetY > weakSelf.headerMaxScrollHeight) {
+                if (scrollView.contentOffset.y <= weakSelf.headerMaxScrollHeight)
+                    scrollView.contentOffset = CGPointMake(0, weakSelf.headerMaxScrollHeight);
+                }else if (offsetY >= 0 && offsetY <= weakSelf.headerMaxScrollHeight) {
+                    if(scrollView.contentOffset.y != offsetY)
+                    scrollView.contentOffset = CGPointMake(0, offsetY);
+                }else if (offsetY < 0) {
+                    if (scrollView.contentOffset.y > 0)
+                        scrollView.contentOffset = CGPointMake(0, 0);
                 }
-            }
-            CGFloat headerY = -tableView.contentOffset.y;
-            if (self.refreshSwitch.isOn && headerY > 0) {
-                headerY = 0;
-            }
-            // 改变headerView的y值
-            [self.headerView changeY:headerY];
-            
-            // 一旦大于等于150了，让headerView的y值等于150，就停留在上边了
-        } else if (contentOffsetY >= 150) {
-            [self.headerView changeY:-150];
-        }
-        
-        // 处理顶部头像
-        CGFloat scale = tableView.contentOffset.y / 80;
-        
-        // 如果大于80，==1，小于0，==0
-        if (tableView.contentOffset.y > 80) {
-            scale = 1;
-        } else if (tableView.contentOffset.y <= 0) {
-            scale = 0;
-        }
-        [self.avatarView setupScale:scale];
+            }];
     }
+
 }
-
-
 
 - (UIScrollView *)getScrollViewWithVC:(UIViewController *)vc {
     for (UIView *tempView in vc.view.subviews) {
