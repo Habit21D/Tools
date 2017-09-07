@@ -10,7 +10,7 @@
 
 @interface SHViewController : UIViewController
 
-- (void)addChildVCWithArray:(NSArray *)childVCArray
-               headerHeight:(CGFloat)headerHeight;
+- (void)addChildVCWithArray:(NSArray <UIViewController *> *)childVCArray
+                 headerView:(UIView *)headerView;
 
 @end

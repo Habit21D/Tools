@@ -22,9 +22,69 @@
     // Do any additional setup after loading the view.
 }
 
-- (void)addChildVCWithArray:(NSArray *)childVCArray
-               headerHeight:(CGFloat)headerHeight {
+- (void)addChildVCWithArray:(NSArray <UIViewController *> *)childVCArray
+                 headerView:(UIView *)headerView {
+    [childVCArray enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        UIViewController* childVC = (UIViewController *)obj;
+        [childVC.view addSubview:childVC.view];
+        [self addChildViewController:childVC];
+        UIScrollView *scrollView = [self getScrollViewWithVC:childVC];
+        [scrollView addObserver:self forKeyPath:@"contentOffset" options:NSKeyValueObservingOptionInitial context:nil];
+        [scrollView addObserver:self forKeyPath:@"dragging" options:NSKeyValueObservingOptionInitial context:nil];
+        [scrollView addObserver:self forKeyPath:@"decelerating" options:NSKeyValueObservingOptionInitial context:nil];
+
+    }];
+}
+
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context
+{
+    if ([keyPath isEqualToString:@"contentOffset"]) {
+        UITableView *tableView = object;
+        CGFloat contentOffsetY = tableView.contentOffset.y;
+        
+        // 如果滑动没有超过150
+        if (contentOffsetY < 150) {
+            // 让这三个tableView的偏移量相等
+            for (BaseViewController *vc in self.childViewControllers) {
+                if (vc.tableView.contentOffset.y != tableView.contentOffset.y) {
+                    vc.tableView.contentOffset = tableView.contentOffset;
+                }
+            }
+            CGFloat headerY = -tableView.contentOffset.y;
+            if (self.refreshSwitch.isOn && headerY > 0) {
+                headerY = 0;
+            }
+            // 改变headerView的y值
+            [self.headerView changeY:headerY];
+            
+            // 一旦大于等于150了，让headerView的y值等于150，就停留在上边了
+        } else if (contentOffsetY >= 150) {
+            [self.headerView changeY:-150];
+        }
+        
+        // 处理顶部头像
+        CGFloat scale = tableView.contentOffset.y / 80;
+        
+        // 如果大于80，==1，小于0，==0
+        if (tableView.contentOffset.y > 80) {
+            scale = 1;
+        } else if (tableView.contentOffset.y <= 0) {
+            scale = 0;
+        }
+        [self.avatarView setupScale:scale];
+    }
+}
+
+
+
+- (UIScrollView *)getScrollViewWithVC:(UIViewController *)vc {
+    for (UIView *tempView in vc.view.subviews) {
+        if ([tempView isKindOfClass:[UIScrollView class]]) {
+            return (UIScrollView *)tempView;
+        }
+    }
     
+    return nil;
 }
 
 - (void)didReceiveMemoryWarning {
