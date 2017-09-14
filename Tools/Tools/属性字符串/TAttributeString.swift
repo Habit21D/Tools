@@ -31,20 +31,13 @@ class TAttributeString {
 //设置属性字符串中的 特殊显示的字符
 extension TAttributeString {
     
-    func height(string: String, color: UIColor) -> Self {
-        let nsString = NSString(string: attributeStr.string)
+    
+    func highlight(string: String, color: UIColor, fontSize: CGFloat) -> Self {
         
-        attributeStr.setAttributes([NSForegroundColorAttributeName:color], range: nsString.range(of: string))
-        
-        return self
+        return highlight(string: string, color: color, font: UIFont.systemFont(ofSize: fontSize))
     }
     
-    func height(string: String, color: UIColor, fontSize: CGFloat) -> Self {
-        
-        return height(string: string, color: color, font: UIFont.systemFont(ofSize: fontSize))
-    }
-    
-    func height(string: String, color: UIColor, font: UIFont) -> Self {
+    func highlight(string: String, color: UIColor, font: UIFont) -> Self {
         
         let nsString = NSString(string: attributeStr.string)
         attributeStr.setAttributes([NSFontAttributeName:font, NSForegroundColorAttributeName:color], range: nsString.range(of: string))

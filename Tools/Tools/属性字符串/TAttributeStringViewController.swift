@@ -29,7 +29,7 @@ class TAttributeStringViewController: DMRootViewController {
     
     func setLabelAttribute() {
 
-        label.attributedText = TAttributeString().setString(string: "swift：这里只是封装了最常用的功能，采用简单的链式调用，核心方法很少，都是一些方便调用的衍生方法", color: UIColor.black, fontSize: 14).height(string: "swift：", color: UIColor.red, fontSize: 20).height (string: "链式调用", color: UIColor.blue, font: UIFont.boldSystemFont(ofSize: 10)).attributeStr
+        label.attributedText = TAttributeString().setString(string: "swift：这里只是封装了最常用的功能，采用简单的链式调用，核心方法很少，都是一些方便调用的衍生方法", color: UIColor.black, fontSize: 14).highlight(string: "swift：", color: UIColor.red, fontSize: 20).highlight (string: "链式调用", color: UIColor.blue, font: UIFont.boldSystemFont(ofSize: 10)).attributeStr
     }
 
     override func didReceiveMemoryWarning() {
