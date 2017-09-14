@@ -8,6 +8,14 @@
 
 import Foundation
 import UIKit
+
+enum TAttributeLocation {
+    case first //只高亮第一个
+    case last   //只高亮最后一个
+    case all    //高亮全部
+    case index(Int) //下标字符串高亮,index从0开始
+}
+
 class TAttributeString {
     
     var attributeStr : NSMutableAttributedString =  NSMutableAttributedString()
@@ -31,20 +39,54 @@ class TAttributeString {
 //设置属性字符串中的 特殊显示的字符
 extension TAttributeString {
     
-    
-    func highlight(string: String, color: UIColor, fontSize: CGFloat) -> Self {
+    func highlight(string: String, color: UIColor, fontSize: CGFloat, location: TAttributeLocation = .all) -> Self {
         
-        return highlight(string: string, color: color, font: UIFont.systemFont(ofSize: fontSize))
+        return highlight(string: string, color: color, font: UIFont.systemFont(ofSize: fontSize), location:location)
     }
     
-    func highlight(string: String, color: UIColor, font: UIFont) -> Self {
+    func highlight(string: String, color: UIColor, font: UIFont, location: TAttributeLocation = .all) -> Self {
         
-        let nsString = NSString(string: attributeStr.string)
-        attributeStr.setAttributes([NSFontAttributeName:font, NSForegroundColorAttributeName:color], range: nsString.range(of: string))
+        let rangeArr = ranges(ofString: string)
+        if (rangeArr.count == 0) { return self }
+        switch location {
+        case .first:
+            attributeStr.setAttributes([NSFontAttributeName:font, NSForegroundColorAttributeName:color], range: rangeArr[0])
+            break
+        case .last:
+            attributeStr.setAttributes([NSFontAttributeName:font, NSForegroundColorAttributeName:color], range: rangeArr.last!)
+            break
+        case .all:
+            for range in rangeArr {
+                attributeStr.setAttributes([NSFontAttributeName:font, NSForegroundColorAttributeName:color], range: range)
+            }
+            break
+        case .index(let index):
+            for (arrIndex, range) in rangeArr.enumerated() {
+                if arrIndex == index {
+                    attributeStr.setAttributes([NSFontAttributeName:font, NSForegroundColorAttributeName:color], range: range)
+                }
+            }
+            break
+            
+        }
         
         return self
     }
     
+    func ranges(ofString subString: String) -> [NSRange] {
+        var arr : [NSRange] = [NSRange]()
+        let nsString = NSString(string: attributeStr.string)
+        while true {
+            let lastRange = arr.last ?? NSMakeRange(0, 0)
+            let searchRange = NSMakeRange(lastRange.location + lastRange.length, nsString.length - lastRange.location - lastRange.length - 1)
+            let range = nsString.range(of: subString, range: searchRange)
+            if range.location != NSNotFound {
+                arr.append(range)
+            }else {
+                return arr
+            }
+        }
+    }
     
 }
 
